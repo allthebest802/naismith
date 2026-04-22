@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naismith's Rule Walking Time Calculator | UK Hillwalking</title>
+<meta name="description" content="Calculate walking time for any UK hill route using Naismith's Rule. Add fitness adjustments, rest stops and group size for a realistic estimate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f1ece1;
+    --paper-dark: #e5dcc9;
+    --ink: #2b2420;
+    --ink-soft: #5a4f46;
+    --moss: #4a5d3a;
+    --moss-dark: #374628;
+    --contour: #b89968;
+    --contour-dark: #8a6f3d;
+    --heather: #7a3b5c;
+    --accent: #c2410c;
+    --line: rgba(43, 36, 32, 0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(184, 153, 104, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(74, 93, 58, 0.06) 0%, transparent 40%),
+      repeating-linear-gradient(
+        0deg,
+        transparent 0,
+        transparent 60px,
+        rgba(184, 153, 104, 0.03) 60px,
+        rgba(184, 153, 104, 0.03) 61px
+      );
+  }
+
+  /* Subtle grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.15 0 0 0 0 0.1 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Header */
+  .masthead {
+    text-align: center;
+    padding-bottom: 2.5rem;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+
+  .masthead::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background: var(--contour-dark);
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--contour-dark);
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: "opsz" 144;
+  }
+
+  h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--moss-dark);
+  }
+
+  .tagline {
+    margin-top: 1.25rem;
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    max-width: 52ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Calculator card */
+  .calc {
+    background: #fdfaf2;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 2.5rem;
+    box-shadow:
+      0 1px 2px rgba(43, 36, 32, 0.04),
+      0 8px 24px rgba(43, 36, 32, 0.08);
+    position: relative;
+  }
+
+  .calc::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--moss) 0%, var(--moss) 33%, var(--contour) 33%, var(--contour) 66%, var(--heather) 66%, var(--heather) 100%);
+  }
+
+  .inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.75rem 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .field-full {
+    grid-column: 1 / -1;
+  }
+
+  label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .input-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 0.35rem;
+    transition: border-color 0.2s;
+  }
+
+  .input-row:focus-within {
+    border-bottom-color: var(--moss);
+  }
+
+  input[type="number"] {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.75rem;
+    color: var(--ink);
+    outline: none;
+    font-variation-settings: "opsz" 48;
+    width: 100%;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
+
+  .unit {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+  }
+
+  /* Segmented */
+  .segmented {
+    display: flex;
+    background: var(--paper-dark);
+    border-radius: 2px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .segmented input { display: none; }
+
+  .segmented label {
+    flex: 1;
+    text-align: center;
+    padding: 0.65rem 0.5rem;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: none;
+    margin: 0;
+    border-radius: 2px;
+    transition: all 0.2s;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .segmented input:checked + label {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .segmented label:hover {
+    color: var(--ink);
+  }
+
+  .segmented input:checked + label:hover {
+    color: var(--paper);
+  }
+
+  .help {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+
+  /* Result */
+  .result {
+    margin-top: 2.5rem;
+    padding-top: 2.5rem;
+    border-top: 1px dashed var(--line);
+    text-align: center;
+  }
+
+  .result-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--contour-dark);
+    margin-bottom: 1rem;
+  }
+
+  .time-display {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: clamp(3.5rem, 10vw, 5.5rem);
+    line-height: 1;
+    color: var(--moss-dark);
+    letter-spacing: -0.02em;
+    font-variation-settings: "opsz" 144;
+    margin-bottom: 0.5rem;
+  }
+
+  .time-display .num {
+    display: inline-block;
+    transition: opacity 0.2s;
+  }
+
+  .time-display .u {
+    font-size: 0.4em;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--ink-soft);
+    margin: 0 0.15em 0 0.05em;
+    vertical-align: baseline;
+  }
+
+  .breakdown {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .bd-item {
+    text-align: center;
+  }
+
+  .bd-value {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .bd-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 0.25rem;
+  }
+
+  /* Info section */
+  .info {
+    margin-top: 4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+
+  .info-block h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--ink);
+    font-style: italic;
+    letter-spacing: -0.01em;
+  }
+
+  .info-block p {
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.85rem;
+  }
+
+  .info-block strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .formula {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    background: var(--paper-dark);
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--contour-dark);
+    margin: 1rem 0;
+    color: var(--ink);
+  }
+
+  /* Footer note */
+  .footnote {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  .footnote::before {
+    content: '◆';
+    display: block;
+    color: var(--contour);
+    font-size: 0.7rem;
+    margin-bottom: 1rem;
+    letter-spacing: 0.5em;
+  }
+
+  .footnote::first-line { font-style: italic; }
+
+  .footnote strong {
+    font-style: normal;
+    color: var(--ink);
+  }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .wrap { padding: 2rem 1rem 3rem; }
+    .calc { padding: 1.75rem 1.25rem; }
+    .inputs { grid-template-columns: 1fr; gap: 1.5rem; }
+    .info { grid-template-columns: 1fr; gap: 2rem; }
+    .breakdown { gap: 1.5rem; }
+  }
+
+  /* Pulse on result change */
+  @keyframes pulse {
+    0% { opacity: 0.3; }
+    100% { opacity: 1; }
+  }
+
+  .pulse { animation: pulse 0.35s ease-out; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Est. 1892 · A Hillwalker's Tool</div>
+    <h1>Naismith's <em>Rule</em></h1>
+    <p class="tagline">Estimate how long your walk will take. Enter your route's distance and total ascent, then refine with fitness, group size and rest stops.</p>
+  </header>
+
+  <section class="calc">
+
+    <div class="inputs">
+
+      <div class="field">
+        <label for="distance">Distance</label>
+        <div class="input-row">
+          <input type="number" id="distance" min="0" step="0.1" value="10">
+          <span class="unit" id="distanceUnit">km</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="ascent">Total ascent</label>
+        <div class="input-row">
+          <input type="number" id="ascent" min="0" step="10" value="500">
+          <span class="unit" id="ascentUnit">m</span>
+        </div>
+      </div>
+
+      <div class="field field-full">
+        <label>Units</label>
+        <div class="segmented" role="radiogroup">
+          <input type="radio" name="units" id="metric" value="metric" checked>
+          <label for="metric">Metric (km/m)</label>
+          <input type="radio" name="units" id="imperial" value="imperial">
+          <label for="imperial">Imperial (mi/ft)</label>
+        </div>
+      </div>
+
+      <div class="field field-full">
+        <label>Fitness & pace (Tranter's correction)</label>
+        <div class="segmented" role="radiogroup">
+          <input type="radio" name="fitness" id="f-fit" value="0.85">
+          <label for="f-fit">Very fit</label>
+          <input type="radio" name="fitness" id="f-avg" value="1" checked>
+          <label for="f-avg">Average</label>
+          <input type="radio" name="fitness" id="f-slow" value="1.25">
+          <label for="f-slow">Leisurely</label>
+          <input type="radio" name="fitness" id="f-unfit" value="1.5">
+          <label for="f-unfit">Beginner</label>
+        </div>
+        <p class="help">Tranter's correction adjusts Naismith's base pace for real-world fitness.</p>
+      </div>
+
+      <div class="field">
+        <label for="group">Group size</label>
+        <div class="input-row">
+          <input type="number" id="group" min="1" max="30" step="1" value="1">
+          <span class="unit">people</span>
+        </div>
+        <p class="help">Larger groups walk more slowly.</p>
+      </div>
+
+      <div class="field">
+        <label for="rests">Rest stops</label>
+        <div class="input-row">
+          <input type="number" id="rests" min="0" max="30" step="1" value="2">
+          <span class="unit">× 15 min</span>
+        </div>
+        <p class="help">Lunch, photos, map checks.</p>
+      </div>
+
+    </div>
+
+    <div class="result">
+      <div class="result-label">Estimated Walking Time</div>
+      <div class="time-display" id="result">
+        <span class="num" id="hours">3</span><span class="u">h</span><span class="num" id="minutes">15</span><span class="u">m</span>
+      </div>
+
+      <div class="breakdown">
+        <div class="bd-item">
+          <div class="bd-value" id="bdBase">2h 30m</div>
+          <div class="bd-label">Base (Naismith)</div>
+        </div>
+        <div class="bd-item">
+          <div class="bd-value" id="bdAdjusted">2h 45m</div>
+          <div class="bd-label">With adjustments</div>
+        </div>
+        <div class="bd-item">
+          <div class="bd-value" id="bdRests">30m</div>
+          <div class="bd-label">Rest stops</div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="info">
+    <div class="info-block">
+      <h2>About Naismith's Rule</h2>
+      <p>Devised by Scottish mountaineer <strong>William W. Naismith in 1892</strong>, this rule of thumb has guided British hillwalkers for over 130 years. It's the standard starting point for trip planning, used by mountain rescue teams, the Mountain Leader syllabus, and countless walking guides.</p>
+      <div class="formula">1 hour per 5 km + 1 hour per 600 m of ascent</div>
+      <p>Or in imperial: <strong>1 hour per 3 miles + 1 hour per 2,000 ft of ascent</strong>.</p>
+    </div>
+
+    <div class="info-block">
+      <h2>A sensible caveat</h2>
+      <p>Naismith assumes a reasonably fit walker on good ground in fair weather. The corrections on this page account for fitness, group dynamics, and stops, but they can't account for bogs, scree, winter conditions, heavy packs, or the pint at the finish that slows down the last mile.</p>
+      <p>Always add a buffer for safety, especially in the hills. Tell someone your route and expected return time. Take a map and compass even if you're using a GPS.</p>
+    </div>
+  </div>
+
+  <div class="footnote">
+    All calculations run in your browser — <strong>nothing is sent anywhere</strong>. Built for hillwalkers, by hillwalkers. Take only photographs, leave only footprints.
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const $ = id => document.getElementById(id);
+
+  const distEl = $('distance');
+  const ascEl = $('ascent');
+  const groupEl = $('group');
+  const restsEl = $('rests');
+  const hoursEl = $('hours');
+  const minutesEl = $('minutes');
+  const bdBase = $('bdBase');
+  const bdAdj = $('bdAdjusted');
+  const bdRests = $('bdRests');
+  const distUnitEl = $('distanceUnit');
+  const ascUnitEl = $('ascentUnit');
+  const resultEl = $('result');
+
+  function fmt(totalMinutes) {
+    totalMinutes = Math.max(0, Math.round(totalMinutes));
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return { h, m, label: `${h}h ${m}m` };
+  }
+
+  function getFitness() {
+    const r = document.querySelector('input[name="fitness"]:checked');
+    return r ? parseFloat(r.value) : 1;
+  }
+
+  function getUnits() {
+    const r = document.querySelector('input[name="units"]:checked');
+    return r ? r.value : 'metric';
+  }
+
+  function calculate() {
+    const units = getUnits();
+    let distanceKm = parseFloat(distEl.value) || 0;
+    let ascentM = parseFloat(ascEl.value) || 0;
+
+    // Convert imperial → metric for calculation
+    if (units === 'imperial') {
+      distanceKm = distanceKm * 1.60934;      // miles → km
+      ascentM = ascentM * 0.3048;             // feet → metres
+    }
+
+    const group = Math.max(1, parseInt(groupEl.value) || 1);
+    const rests = Math.max(0, parseInt(restsEl.value) || 0);
+    const fitness = getFitness();
+
+    // Naismith's Rule: 12 minutes per km + 1 minute per 10m of ascent
+    // (equivalent to: 1 hour per 5km + 1 hour per 600m ascent)
+    const baseMinutes = (distanceKm * 12) + (ascentM / 10);
+
+    // Tranter/fitness correction
+    let adjusted = baseMinutes * fitness;
+
+    // Group size correction (subtle - 3% slower per additional person, capped)
+    const groupFactor = 1 + Math.min(0.25, (group - 1) * 0.03);
+    adjusted = adjusted * groupFactor;
+
+    // Rest stops (15 min each)
+    const restMinutes = rests * 15;
+    const total = adjusted + restMinutes;
+
+    // Display
+    const baseFmt = fmt(baseMinutes);
+    const adjFmt = fmt(adjusted);
+    const restFmt = fmt(restMinutes);
+    const totalFmt = fmt(total);
+
+    hoursEl.textContent = totalFmt.h;
+    minutesEl.textContent = String(totalFmt.m).padStart(2, '0');
+    bdBase.textContent = baseFmt.label;
+    bdAdj.textContent = adjFmt.label;
+    bdRests.textContent = restFmt.label;
+
+    // Pulse animation
+    resultEl.classList.remove('pulse');
+    void resultEl.offsetWidth; // trigger reflow
+    resultEl.classList.add('pulse');
+  }
+
+  function updateUnits() {
+    const units = getUnits();
+    if (units === 'imperial') {
+      distUnitEl.textContent = 'mi';
+      ascUnitEl.textContent = 'ft';
+    } else {
+      distUnitEl.textContent = 'km';
+      ascUnitEl.textContent = 'm';
+    }
+  }
+
+  // Handle unit switching — convert displayed values
+  let previousUnits = 'metric';
+  document.querySelectorAll('input[name="units"]').forEach(el => {
+    el.addEventListener('change', () => {
+      const newUnits = getUnits();
+      if (newUnits === previousUnits) return;
+
+      const currentDist = parseFloat(distEl.value) || 0;
+      const currentAsc = parseFloat(ascEl.value) || 0;
+
+      if (newUnits === 'imperial') {
+        // metric → imperial
+        distEl.value = (currentDist / 1.60934).toFixed(2);
+        ascEl.value = Math.round(currentAsc / 0.3048);
+      } else {
+        // imperial → metric
+        distEl.value = (currentDist * 1.60934).toFixed(2);
+        ascEl.value = Math.round(currentAsc * 0.3048);
+      }
+
+      previousUnits = newUnits;
+      updateUnits();
+      calculate();
+    });
+  });
+
+  // All other inputs
+  ['distance', 'ascent', 'group', 'rests'].forEach(id => {
+    $(id).addEventListener('input', calculate);
+  });
+
+  document.querySelectorAll('input[name="fitness"]').forEach(el => {
+    el.addEventListener('change', calculate);
+  });
+
+  // Initial render
+  updateUnits();
+  calculate();
+})();
+</script>
+</body>
+</html>
