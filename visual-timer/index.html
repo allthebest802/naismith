@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visual Timer & Sensory Break Timer — SendSteps</title>
+<meta name="description" content="A free visual timer with work-break cycles designed for neurodivergent children. Preset patterns for ADHD focus, autism regulation, homework chunks, and more. Parent and teacher friendly.">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0F7FF;
+  --surface:#FFFFFF;
+  --surface2:#F5F9FF;
+  --border:#D0E4FF;
+  --border2:#B0CCF8;
+  --primary:#1E60BE;
+  --primary-d:#1250AA;
+  --primary-l:#DCEEFF;
+  --warn:#A85800;
+  --warn-l:#FEF3D8;
+  --done:#007D35;
+  --done-l:#D8F5E8;
+  --done-d:#1A7A50;
+  --text:#1A2840;
+  --text2:#3A5070;
+  --text3:#4E6882;
+  --radius:16px;
+  --radius-lg:24px;
+  --shadow:0 4px 24px rgba(26,40,64,0.10);
+  --shadow-lg:0 8px 48px rgba(26,40,64,0.15);
+  /* Phase colours */
+  --phase-work:#4A90E8;       /* cool blue for focus */
+  --phase-work-d:#2B6FC9;
+  --phase-break:#48C880;      /* warm green for break */
+  --phase-break-d:#2FA868;
+  --phase-warn:#F0A030;        /* amber transition warning */
+  --timer-color:var(--phase-work);
+}
+
+/* BRIGHT THEME */
+body.bright{
+  --bg:#FFF8F0;
+  --surface:#FFFFFF;
+  --surface2:#FFF4E8;
+  --border:#FFD8A8;
+  --border2:#FFB870;
+  --primary:#B74400;
+  --primary-d:#D06010;
+  --primary-l:#FFE8C8;
+  --text:#2A1800;
+  --text2:#5A3800;
+  --text3:#976737;
+  --phase-work:#B74400;
+  --phase-work-d:#8A3000;
+  --phase-break:#2E8A5B;
+  --phase-break-d:#1A6B40;
+}
+
+html{font-size:16px}
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  transition:background 0.3s,color 0.3s;
+}
+button{cursor:pointer;font-family:'Nunito',sans-serif;border:none;background:none}
+
+/* ── HEADER ── */
+.header{
+  text-align:center;padding:28px 20px 16px;
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+}
+.header h1{font-family:'Fredoka',sans-serif;font-size:clamp(1.6rem,4vw,2.2rem);font-weight:600;color:var(--text)}
+.theme-toggle{display:flex;gap:6px;margin-left:auto}
+.theme-btn{
+  padding:6px 14px;border-radius:100px;font-size:0.78rem;font-weight:700;
+  border:2px solid var(--border2);background:var(--surface2);color:var(--text2);
+  transition:all 0.15s;
+}
+.theme-btn.active{background:var(--primary-l);border-color:var(--primary);color:var(--primary-d)}
+
+/* ── MAIN WRAP ── */
+.wrap{max-width:560px;margin:0 auto;padding:0 20px 60px}
+
+/* ── TIMER DISPLAY ── */
+.timer-display{
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:var(--radius-lg);padding:28px 24px 24px;
+  box-shadow:var(--shadow-lg);margin-bottom:20px;
+  text-align:center;position:relative;
+  transition:border-color 0.3s;
+}
+
+/* Phase pill */
+.phase-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:100px;
+  font-size:0.78rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.5px;
+  margin-bottom:16px;transition:all 0.3s;
+}
+.phase-pill.work{background:rgba(74,144,232,0.12);color:var(--phase-work-d)}
+.phase-pill.break{background:rgba(72,200,128,0.15);color:var(--phase-break-d)}
+.phase-pill.warn{background:rgba(240,160,48,0.18);color:var(--warn)}
+
+/* Cycle dots */
+.cycle-dots{display:flex;gap:6px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.dot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--border);transition:background 0.3s,transform 0.3s;
+}
+.dot.done{background:var(--phase-break-d)}
+.dot.current{background:var(--phase-work);transform:scale(1.4)}
+.dot.break{background:var(--phase-break)}
+
+/* Circular pie timer */
+.circle-wrap{position:relative;width:220px;height:220px;margin:0 auto 16px;cursor:pointer}
+.circle-wrap svg{width:220px;height:220px;transform:rotate(-90deg)}
+.circle-bg{fill:none;stroke:var(--border);stroke-width:16}
+.circle-progress{
+  fill:none;stroke:var(--timer-color);stroke-width:16;
+  stroke-linecap:round;
+  stroke-dasharray:628;stroke-dashoffset:0;
+  transition:stroke-dashoffset 0.5s linear, stroke 0.3s;
+}
+.circle-time{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Fredoka',sans-serif;font-size:3rem;font-weight:600;
+  color:var(--text);line-height:1;transition:color 0.3s;
+  pointer-events:none;
+}
+
+/* Next-up preview */
+.next-up{
+  font-size:0.8rem;font-weight:700;color:var(--text3);
+  margin-top:6px;min-height:20px;
+}
+.next-up strong{color:var(--text2)}
+
+/* Status message */
+.status-msg{
+  margin-top:10px;font-size:0.88rem;font-weight:700;color:var(--text3);
+  min-height:22px;transition:color 0.3s;
+}
+.status-msg.warning{color:var(--warn)}
+.status-msg.done{color:var(--done-d)}
+
+.circle-label{
+  font-size:0.72rem;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:0.8px;margin-top:4px;
+}
+
+/* ── CONTROLS ── */
+.controls{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.ctrl-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:11px 22px;border-radius:100px;
+  font-size:0.9rem;font-weight:700;transition:all 0.15s;
+}
+.ctrl-btn.start{
+  background:linear-gradient(135deg,var(--primary-d),var(--primary));
+  color:white;box-shadow:0 3px 14px rgba(74,144,232,0.35);
+}
+.ctrl-btn.start:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(74,144,232,0.45)}
+.ctrl-btn.pause{background:var(--warn-l);border:2px solid var(--warn);color:var(--warn)}
+.ctrl-btn.pause:hover{background:var(--warn);color:white}
+.ctrl-btn.reset{background:var(--surface2);border:2px solid var(--border2);color:var(--text2)}
+.ctrl-btn.reset:hover{border-color:var(--text3);color:var(--text)}
+.ctrl-btn.fullscreen{background:var(--surface2);border:2px solid var(--border2);color:var(--text2)}
+.ctrl-btn.fullscreen:hover{border-color:var(--primary);color:var(--primary-d);background:var(--primary-l)}
+.ctrl-btn.skip{background:var(--surface2);border:2px solid var(--border2);color:var(--text2)}
+.ctrl-btn.skip:hover{border-color:var(--phase-break-d);color:var(--phase-break-d);background:var(--done-l)}
+
+/* ── SESSION SETUP CARD ── */
+.setup-card{
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:var(--radius-lg);padding:20px 24px;
+  box-shadow:var(--shadow);margin-bottom:16px;
+}
+.card-label{
+  font-size:0.72rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:0.8px;color:var(--text3);margin-bottom:12px;
+}
+.preset-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;
+}
+.preset-btn{
+  padding:14px 12px;border-radius:var(--radius);
+  border:2px solid var(--border);background:var(--surface2);
+  color:var(--text2);transition:all 0.15s;text-align:left;
+  display:flex;align-items:flex-start;gap:10px;
+}
+.preset-btn:hover{border-color:var(--primary);background:var(--primary-l);color:var(--primary-d)}
+.preset-btn.active{border-color:var(--primary);background:var(--primary-l);color:var(--primary-d)}
+.preset-icon{font-size:1.6rem;flex-shrink:0;line-height:1}
+.preset-text{flex:1;min-width:0}
+.preset-name{font-size:0.88rem;font-weight:800;margin-bottom:2px}
+.preset-desc{font-size:0.72rem;font-weight:600;opacity:0.85;line-height:1.3}
+
+/* Custom builder */
+.custom-toggle{
+  width:100%;padding:12px;border-radius:var(--radius);
+  background:var(--surface2);border:2px solid var(--border);
+  font-size:0.85rem;font-weight:700;color:var(--text2);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all 0.15s;
+}
+.custom-toggle:hover{border-color:var(--primary);color:var(--primary-d)}
+.custom-toggle.open{background:var(--primary-l);border-color:var(--primary);color:var(--primary-d)}
+
+.custom-builder{
+  display:none;margin-top:14px;padding:16px;
+  background:var(--surface2);border:2px solid var(--border);
+  border-radius:var(--radius);
+}
+.custom-builder.open{display:block}
+
+.custom-row{
+  display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;
+}
+.custom-row:last-child{margin-bottom:0}
+.custom-row-label{
+  font-size:0.8rem;font-weight:700;color:var(--text2);
+  flex:1;min-width:90px;
+}
+.num-control{
+  display:flex;align-items:center;gap:4px;
+  background:var(--surface);border:2px solid var(--border2);border-radius:var(--radius);
+  overflow:hidden;
+}
+.num-btn{
+  width:36px;height:36px;font-size:1.1rem;font-weight:700;color:var(--text2);
+  transition:background 0.15s;
+}
+.num-btn:hover{background:var(--primary-l);color:var(--primary-d)}
+.num-input{
+  width:50px;text-align:center;border:none;background:transparent;
+  font-family:'Fredoka',sans-serif;font-size:1.05rem;font-weight:600;
+  color:var(--text);outline:none;
+}
+.num-input::-webkit-outer-spin-button,
+.num-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.num-input[type=number]{-moz-appearance:textfield}
+.num-unit{
+  font-size:0.75rem;font-weight:700;color:var(--text3);
+  min-width:48px;
+}
+
+.apply-custom-btn{
+  width:100%;margin-top:12px;padding:12px;border-radius:var(--radius);
+  background:var(--primary);color:white;font-size:0.88rem;font-weight:700;
+  transition:all 0.15s;
+}
+.apply-custom-btn:hover{background:var(--primary-d)}
+
+/* ── SUMMARY BAR ── */
+.summary{
+  background:var(--primary-l);border:2px solid var(--primary);
+  border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;
+  font-size:0.85rem;font-weight:700;color:var(--primary-d);
+  text-align:center;
+}
+
+/* ── SOUND ── */
+.sound-row{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:var(--radius-lg);padding:14px 20px;
+  box-shadow:var(--shadow);margin-bottom:16px;
+}
+.sound-label{font-size:0.82rem;font-weight:700;color:var(--text2);flex:1}
+.sound-toggle-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:100px;font-size:0.78rem;font-weight:700;
+  border:2px solid var(--border2);background:var(--surface2);color:var(--text2);
+  transition:all 0.15s;
+}
+.sound-toggle-btn.on{background:var(--done-l);border-color:var(--done-d);color:var(--done-d)}
+
+/* ── TRANSITION SCREEN ── */
+.transition-overlay{
+  display:none;position:fixed;inset:0;z-index:8000;
+  background:var(--bg);
+  flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;text-align:center;
+}
+.transition-overlay.active{display:flex;animation:fadeIn 0.4s ease-out}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.transition-icon{font-size:4rem;margin-bottom:16px}
+.transition-title{
+  font-family:'Fredoka',sans-serif;font-size:clamp(1.6rem,5vw,2.5rem);
+  font-weight:600;color:var(--text);margin-bottom:10px;
+}
+.transition-sub{font-size:1.1rem;font-weight:700;color:var(--text2);margin-bottom:24px;max-width:30ch}
+.transition-activity{
+  background:var(--surface);border:2px dashed var(--border2);
+  border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:20px;
+  max-width:360px;
+}
+.transition-activity-label{
+  font-size:0.72rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:0.8px;color:var(--text3);margin-bottom:6px;
+}
+.transition-activity-text{font-size:1rem;font-weight:700;color:var(--text)}
+.transition-countdown{font-size:0.88rem;color:var(--text3);font-weight:700}
+
+/* ── FULLSCREEN ── */
+body.fs-mode{overflow:hidden}
+.fs-overlay{
+  display:none;position:fixed;inset:0;
+  background:var(--bg);
+  flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;padding:20px;
+}
+.fs-overlay.active{display:flex}
+.fs-phase{
+  font-family:'Fredoka',sans-serif;font-size:min(6vmin,32px);
+  font-weight:600;color:var(--text2);margin-bottom:12px;
+  text-transform:uppercase;letter-spacing:2px;
+}
+.fs-circle{position:relative;cursor:pointer}
+.fs-circle svg{width:min(65vmin,400px);height:min(65vmin,400px);transform:rotate(-90deg)}
+.fs-bg{fill:none;stroke:var(--border);stroke-width:14}
+.fs-progress{
+  fill:none;stroke:var(--timer-color);stroke-width:14;
+  stroke-linecap:round;
+  stroke-dasharray:1257;stroke-dashoffset:0;
+  transition:stroke-dashoffset 0.5s linear,stroke 0.3s;
+}
+.fs-time{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Fredoka',sans-serif;font-size:min(15vmin,90px);font-weight:600;
+  color:var(--text);pointer-events:none;
+}
+.fs-cycles{display:flex;gap:8px;margin-top:20px}
+.fs-dot{width:14px;height:14px;border-radius:50%;background:var(--border);transition:all 0.3s}
+.fs-dot.done{background:var(--phase-break-d)}
+.fs-dot.current{background:var(--phase-work);transform:scale(1.4)}
+.fs-dot.break{background:var(--phase-break)}
+
+.fs-status{font-family:'Fredoka',sans-serif;font-size:min(4vmin,24px);font-weight:600;color:var(--text3);margin-top:16px;min-height:32px;text-align:center}
+.fs-status.warning{color:var(--warn)}
+.fs-status.done{color:var(--done-d)}
+.fs-exit{
+  position:absolute;top:20px;right:20px;
+  padding:8px 16px;border-radius:100px;font-size:0.82rem;font-weight:700;
+  border:2px solid var(--border2);background:var(--surface);color:var(--text2);
+}
+.fs-exit:hover{border-color:var(--text3)}
+.fs-controls{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;justify-content:center}
+
+/* Done animation */
+@keyframes doneFlash{0%,100%{opacity:1}50%{opacity:0.5}}
+.done-flash{animation:doneFlash 0.5s ease-in-out 4}
+
+/* Accessibility */
+.skip-link{position:absolute;top:-100px;left:16px;z-index:10000;background:#1A2840;color:#F0F7FF;font-size:0.9rem;font-weight:700;padding:10px 18px;border-radius:8px;text-decoration:none;transition:top 0.15s}
+.skip-link:focus{top:16px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+a:focus-visible,button:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #2A6BC8;outline-offset:3px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
+
+@media(max-width:420px){
+  .preset-grid{grid-template-columns:1fr}
+  .custom-row-label{flex:0 0 100%}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<div id="main-content" tabindex="-1" style="outline:none">
+<a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:700;color:#2A6BC8;text-decoration:none;border:1.5px solid #B0CCF8;border-radius:100px;padding:4px 12px;margin:10px 0 0 16px">&#8592; SendSteps Home</a>
+<div class="header">
+  <h1>⏱️ Visual Timer</h1>
+  <div class="theme-toggle">
+    <button class="theme-btn active" id="themeCalmBtn" onclick="setTheme('calm')">🌙 Calm</button>
+    <button class="theme-btn" id="themeBrightBtn" onclick="setTheme('bright')">🌈 Bright</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- TIMER DISPLAY -->
+  <div class="timer-display">
+    <div class="phase-pill work" id="phasePill">
+      <span id="phaseIcon">🎯</span>
+      <span id="phaseName">Focus</span>
+    </div>
+
+    <div class="cycle-dots" id="cycleDots"></div>
+
+    <div class="circle-wrap" onclick="togglePlay()">
+      <svg viewBox="0 0 220 220">
+        <circle class="circle-bg" cx="110" cy="110" r="100"/>
+        <circle class="circle-progress" id="circleProgress" cx="110" cy="110" r="100"/>
+      </svg>
+      <div class="circle-time" id="circleTime">00:00</div>
+    </div>
+    <div class="circle-label">Tap circle to start / pause</div>
+
+    <div class="next-up" id="nextUp"></div>
+    <div class="status-msg" id="statusMsg">Choose a preset below to begin</div>
+
+    <div class="controls">
+      <button class="ctrl-btn start" id="playBtn" onclick="togglePlay()">▶ Start</button>
+      <button class="ctrl-btn skip" id="skipBtn" onclick="skipPhase()" style="display:none">⏭ Skip</button>
+      <button class="ctrl-btn reset" onclick="resetSession()">↺ Reset</button>
+      <button class="ctrl-btn fullscreen" onclick="openFullscreen()">⛶ Full screen</button>
+    </div>
+  </div>
+
+  <!-- SESSION SUMMARY -->
+  <div class="summary" id="summary" style="display:none"></div>
+
+  <!-- SETUP CARD -->
+  <div class="setup-card">
+    <div class="card-label">Choose a session type</div>
+    <div class="preset-grid" id="presetGrid"></div>
+
+    <button class="custom-toggle" id="customToggle" onclick="toggleCustom()">
+      <span>🛠️</span> <span id="customToggleLabel">Build your own</span>
+    </button>
+
+    <div class="custom-builder" id="customBuilder">
+      <div class="custom-row">
+        <label class="custom-row-label" for="workMinsInput">Focus time</label>
+        <div class="num-control">
+          <button class="num-btn" onclick="adjustNum('workMinsInput',-1,0,120)" aria-label="Decrease focus minutes">−</button>
+          <input class="num-input" id="workMinsInput" type="number" min="0" max="120" value="15">
+          <button class="num-btn" onclick="adjustNum('workMinsInput',1,0,120)" aria-label="Increase focus minutes">+</button>
+        </div>
+        <span class="num-unit">mins</span>
+      </div>
+      <div class="custom-row">
+        <label class="custom-row-label" for="breakMinsInput">Break time</label>
+        <div class="num-control">
+          <button class="num-btn" onclick="adjustNum('breakMinsInput',-1,0,60)" aria-label="Decrease break minutes">−</button>
+          <input class="num-input" id="breakMinsInput" type="number" min="0" max="60" value="5">
+          <button class="num-btn" onclick="adjustNum('breakMinsInput',1,0,60)" aria-label="Increase break minutes">+</button>
+        </div>
+        <span class="num-unit">mins</span>
+      </div>
+      <div class="custom-row">
+        <label class="custom-row-label" for="cyclesInput">Repeat</label>
+        <div class="num-control">
+          <button class="num-btn" onclick="adjustNum('cyclesInput',-1,1,10)" aria-label="Decrease cycles">−</button>
+          <input class="num-input" id="cyclesInput" type="number" min="1" max="10" value="3">
+          <button class="num-btn" onclick="adjustNum('cyclesInput',1,1,10)" aria-label="Increase cycles">+</button>
+        </div>
+        <span class="num-unit">cycles</span>
+      </div>
+      <button class="apply-custom-btn" onclick="applyCustom()">Apply custom session →</button>
+    </div>
+  </div>
+
+  <!-- SOUND -->
+  <div class="sound-row">
+    <span class="sound-label">🔔 Gentle sound at transitions</span>
+    <button class="sound-toggle-btn on" id="soundBtn" onclick="toggleSound()">🔊 On</button>
+  </div>
+
+</div>
+
+<!-- TRANSITION OVERLAY -->
+<div class="transition-overlay" id="transitionOverlay">
+  <div class="transition-icon" id="tIcon">☕</div>
+  <div class="transition-title" id="tTitle">Break time!</div>
+  <div class="transition-sub" id="tSub">Good focus — now it's time to rest your brain.</div>
+  <div class="transition-activity" id="tActivity" style="display:none">
+    <div class="transition-activity-label">Try this</div>
+    <div class="transition-activity-text" id="tActivityText"></div>
+  </div>
+  <div class="transition-countdown" id="tCountdown">Starting in 3...</div>
+</div>
+
+<!-- FULLSCREEN OVERLAY -->
+<div class="fs-overlay" id="fsOverlay">
+  <button class="fs-exit" onclick="closeFullscreen()">✕ Exit full screen</button>
+  <div class="fs-phase" id="fsPhase">Focus</div>
+  <div class="fs-circle" onclick="togglePlay()">
+    <svg viewBox="0 0 400 400">
+      <circle class="fs-bg" cx="200" cy="200" r="180"/>
+      <circle class="fs-progress" id="fsProgress" cx="200" cy="200" r="180"/>
+    </svg>
+    <div class="fs-time" id="fsTime">00:00</div>
+  </div>
+  <div class="fs-cycles" id="fsCycles"></div>
+  <div class="fs-status" id="fsStatus"></div>
+  <div class="fs-controls">
+    <button class="ctrl-btn start" id="fsPlayBtn" onclick="togglePlay()">▶ Start</button>
+    <button class="ctrl-btn skip" id="fsSkipBtn" onclick="skipPhase()" style="display:none">⏭ Skip</button>
+    <button class="ctrl-btn reset" onclick="resetSession()">↺ Reset</button>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────
+// PRESETS — work/break/cycles calibrated for different needs
+// ──────────────────────────────────────────────────────────────
+const PRESETS = [
+  {
+    id:'simple',
+    icon:'⏱️',
+    name:'Simple timer',
+    desc:'Just one countdown, no breaks',
+    work:10, break:0, cycles:1
+  },
+  {
+    id:'short-focus',
+    icon:'🌱',
+    name:'Short focus',
+    desc:'10 min work · 3 min break · 3×',
+    work:10, break:3, cycles:3
+  },
+  {
+    id:'classic',
+    icon:'🎯',
+    name:'Classic Pomodoro',
+    desc:'25 min work · 5 min break · 4×',
+    work:25, break:5, cycles:4
+  },
+  {
+    id:'hyperfocus',
+    icon:'🚀',
+    name:'Hyperfocus',
+    desc:'45 min work · 15 min break · 2×',
+    work:45, break:15, cycles:2
+  },
+  {
+    id:'regulation',
+    icon:'🫧',
+    name:'Sensory regulation',
+    desc:'20 min activity · 10 min break · 3×',
+    work:20, break:10, cycles:3
+  },
+  {
+    id:'homework',
+    icon:'📚',
+    name:'Homework chunks',
+    desc:'15 min work · 5 min break · 3×',
+    work:15, break:5, cycles:3
+  },
+  {
+    id:'just-break',
+    icon:'☕',
+    name:'Just a break',
+    desc:'10 min sensory break, no work',
+    work:0, break:10, cycles:1
+  }
+];
+
+// Break activity suggestions — rotate so each break feels fresh
+const BREAK_ACTIVITIES = [
+  'Stretch your arms above your head',
+  'Get a drink of water',
+  'Look out the window at something far away',
+  'Squeeze something soft — a cushion or a teddy',
+  'Take 5 slow breaths',
+  'Wiggle your fingers and toes',
+  'Stand up and shake your whole body',
+  'Tell someone something you liked about your focus time',
+  'Listen to one song you love',
+  'Do 10 jumping jacks',
+  'Hug a pet if you have one',
+  'Draw a quick doodle',
+  'Go to the loo and wash your hands',
+  'Have a small snack',
+  'Rest your eyes — close them for a moment'
+];
+
+// ──────────────────────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────────────────────
+let session = null;           // current session config {work, break, cycles}
+let sessionName = '';
+let currentCycle = 1;         // 1-indexed
+let currentPhase = 'work';    // 'work' or 'break'
+let phaseSecondsTotal = 0;
+let phaseSecondsLeft = 0;
+let running = false;
+let interval = null;
+let soundOn = true;
+let audioCtx = null;
+let warningGiven = false;
+let activityIndex = 0;
+
+// ──────────────────────────────────────────────────────────────
+// THEME
+// ──────────────────────────────────────────────────────────────
+function setTheme(t) {
+  document.body.classList.toggle('bright', t === 'bright');
+  document.getElementById('themeCalmBtn').classList.toggle('active', t === 'calm');
+  document.getElementById('themeBrightBtn').classList.toggle('active', t === 'bright');
+  try { localStorage.setItem('ss_timer_theme', t); } catch(e){}
+}
+
+// ──────────────────────────────────────────────────────────────
+// SOUND
+// ──────────────────────────────────────────────────────────────
+function toggleSound() {
+  soundOn = !soundOn;
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = soundOn ? '🔊 On' : '🔇 Off';
+  btn.classList.toggle('on', soundOn);
+  try { localStorage.setItem('ss_timer_sound', soundOn ? '1' : '0'); } catch(e){}
+}
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return null; }
+  }
+  return audioCtx;
+}
+
+function playTone(freq, duration, vol=0.25) {
+  if (!soundOn) return;
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e){}
+}
+
+// Soft chime — two-tone, gentle
+function playTransition() {
+  playTone(523, 0.4);                 // C5
+  setTimeout(() => playTone(659, 0.5), 220); // E5
+}
+// Very soft warning — one note, quiet
+function playWarning() {
+  playTone(440, 0.25, 0.15);
+}
+// Session complete — three rising tones, celebratory but not loud
+function playSessionDone() {
+  playTone(523, 0.2, 0.2);
+  setTimeout(() => playTone(659, 0.2, 0.2), 200);
+  setTimeout(() => playTone(784, 0.5, 0.22), 400);
+}
+
+// ──────────────────────────────────────────────────────────────
+// PRESET RENDERING
+// ──────────────────────────────────────────────────────────────
+function renderPresets() {
+  const grid = document.getElementById('presetGrid');
+  grid.innerHTML = PRESETS.map(p => `
+    <button class="preset-btn" data-id="${p.id}" onclick="choosePreset('${p.id}')">
+      <span class="preset-icon">${p.icon}</span>
+      <span class="preset-text">
+        <span class="preset-name">${p.name}</span>
+        <span class="preset-desc">${p.desc}</span>
+      </span>
+    </button>
+  `).join('');
+}
+
+function choosePreset(id) {
+  const p = PRESETS.find(x => x.id === id);
+  if (!p) return;
+  sessionName = p.name;
+  loadSession({ work: p.work, break: p.break, cycles: p.cycles });
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === id);
+  });
+  // Close custom builder if open
+  document.getElementById('customBuilder').classList.remove('open');
+  document.getElementById('customToggle').classList.remove('open');
+  document.getElementById('customToggleLabel').textContent = 'Build your own';
+  try { localStorage.setItem('ss_timer_last_preset', id); } catch(e){}
+}
+
+// ──────────────────────────────────────────────────────────────
+// CUSTOM BUILDER
+// ──────────────────────────────────────────────────────────────
+function toggleCustom() {
+  const builder = document.getElementById('customBuilder');
+  const toggle = document.getElementById('customToggle');
+  const label = document.getElementById('customToggleLabel');
+  const open = builder.classList.toggle('open');
+  toggle.classList.toggle('open', open);
+  label.textContent = open ? 'Hide custom builder' : 'Build your own';
+}
+
+function adjustNum(id, delta, min, max) {
+  const el = document.getElementById(id);
+  let v = parseInt(el.value) || 0;
+  v = Math.max(min, Math.min(max, v + delta));
+  el.value = v;
+}
+
+function applyCustom() {
+  const work = Math.max(0, Math.min(120, parseInt(document.getElementById('workMinsInput').value) || 0));
+  const brk  = Math.max(0, Math.min(60,  parseInt(document.getElementById('breakMinsInput').value) || 0));
+  const cyc  = Math.max(1, Math.min(10,  parseInt(document.getElementById('cyclesInput').value) || 1));
+
+  if (work === 0 && brk === 0) {
+    setStatus('Please set at least one of focus or break time', 'warning');
+    return;
+  }
+
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  sessionName = 'Custom';
+  loadSession({ work, break: brk, cycles: cyc });
+}
+
+// ──────────────────────────────────────────────────────────────
+// LOAD / RESET SESSION
+// ──────────────────────────────────────────────────────────────
+function loadSession(config) {
+  clearInterval(interval);
+  running = false;
+  session = config;
+  currentCycle = 1;
+  currentPhase = config.work > 0 ? 'work' : 'break';
+  phaseSecondsTotal = (currentPhase === 'work' ? config.work : config.break) * 60;
+  phaseSecondsLeft = phaseSecondsTotal;
+  warningGiven = false;
+
+  updateSummary();
+  updatePhasePill();
+  renderCycleDots();
+  updateDisplay();
+  updateNextUp();
+  updatePlayBtn();
+  setStatus('Ready — tap Start or the circle');
+}
+
+function resetSession() {
+  if (!session) {
+    setStatus('Choose a preset below to begin');
+    return;
+  }
+  loadSession(session);
+}
+
+function updateSummary() {
+  const el = document.getElementById('summary');
+  if (!session) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  const parts = [];
+  if (session.work > 0) parts.push(`${session.work} min focus`);
+  if (session.break > 0) parts.push(`${session.break} min break`);
+  const repeatStr = session.cycles > 1 ? ` × ${session.cycles}` : '';
+  el.textContent = `${sessionName}: ${parts.join(' + ')}${repeatStr}`;
+}
+
+// ──────────────────────────────────────────────────────────────
+// PHASE PILL & CYCLE DOTS
+// ──────────────────────────────────────────────────────────────
+function updatePhasePill() {
+  const pill = document.getElementById('phasePill');
+  const icon = document.getElementById('phaseIcon');
+  const name = document.getElementById('phaseName');
+  const fsPhase = document.getElementById('fsPhase');
+
+  if (!session) {
+    pill.className = 'phase-pill work';
+    icon.textContent = '🎯';
+    name.textContent = 'Focus';
+    fsPhase.textContent = 'Focus';
+    return;
+  }
+
+  pill.className = 'phase-pill ' + currentPhase;
+  if (currentPhase === 'work') {
+    icon.textContent = '🎯';
+    name.textContent = `Focus · Cycle ${currentCycle} of ${session.cycles}`;
+    fsPhase.textContent = `Focus · ${currentCycle} of ${session.cycles}`;
+  } else {
+    icon.textContent = '☕';
+    name.textContent = `Break · Cycle ${currentCycle} of ${session.cycles}`;
+    fsPhase.textContent = `Break · ${currentCycle} of ${session.cycles}`;
+  }
+}
+
+function renderCycleDots() {
+  const container = document.getElementById('cycleDots');
+  const fsContainer = document.getElementById('fsCycles');
+  if (!session || session.cycles <= 1) {
+    container.innerHTML = '';
+    fsContainer.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  for (let i = 1; i <= session.cycles; i++) {
+    let cls = '';
+    if (i < currentCycle) cls = 'done';
+    else if (i === currentCycle) cls = currentPhase === 'break' ? 'break' : 'current';
+    html += `<span class="dot ${cls}" aria-label="Cycle ${i}"></span>`;
+  }
+  container.innerHTML = html;
+
+  // Fullscreen version
+  let fsHtml = '';
+  for (let i = 1; i <= session.cycles; i++) {
+    let cls = '';
+    if (i < currentCycle) cls = 'done';
+    else if (i === currentCycle) cls = currentPhase === 'break' ? 'break' : 'current';
+    fsHtml += `<span class="fs-dot ${cls}"></span>`;
+  }
+  fsContainer.innerHTML = fsHtml;
+}
+
+function updateNextUp() {
+  const el = document.getElementById('nextUp');
+  if (!session) { el.textContent = ''; return; }
+
+  // Figure out what's next
+  if (currentPhase === 'work' && session.break > 0) {
+    el.innerHTML = `Next: <strong>${session.break} min break</strong>`;
+  } else if (currentPhase === 'break' && currentCycle < session.cycles && session.work > 0) {
+    el.innerHTML = `Next: <strong>${session.work} min focus</strong> (cycle ${currentCycle + 1})`;
+  } else if (currentPhase === 'work' && currentCycle < session.cycles) {
+    el.innerHTML = `Next: <strong>Focus cycle ${currentCycle + 1}</strong>`;
+  } else {
+    el.innerHTML = `<strong>Last phase</strong> — nearly done`;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// PLAY / PAUSE
+// ──────────────────────────────────────────────────────────────
+function togglePlay() {
+  if (!session) return;
+  if (running) pause(); else start();
+}
+
+function start() {
+  if (!session) return;
+  if (phaseSecondsLeft <= 0) {
+    // This phase was completed — move to next
+    advancePhase();
+    return;
+  }
+  running = true;
+  updatePlayBtn();
+  setStatus('');
+  interval = setInterval(tick, 1000);
+}
+
+function pause() {
+  running = false;
+  clearInterval(interval);
+  updatePlayBtn();
+  setStatus('Paused — tap circle to continue');
+}
+
+function tick() {
+  if (phaseSecondsLeft <= 0) {
+    clearInterval(interval);
+    running = false;
+    onPhaseEnd();
+    return;
+  }
+  phaseSecondsLeft--;
+
+  // 2-minute warning for longer phases (only if phase is > 3 mins)
+  if (!warningGiven && phaseSecondsTotal > 180 && phaseSecondsLeft === 120) {
+    warningGiven = true;
+    setStatus('2 minutes left', 'warning');
+    playWarning();
+  }
+
+  // Last 10 seconds countdown
+  if (phaseSecondsLeft <= 10 && phaseSecondsLeft > 0) {
+    setStatus(`Almost done… ${phaseSecondsLeft}`, 'warning');
+  } else if (phaseSecondsLeft > 120 && warningGiven === false) {
+    // keep any status clear once past the warning threshold on fresh phases
+  }
+
+  updateDisplay();
+}
+
+function onPhaseEnd() {
+  // Determine next action
+  if (currentPhase === 'work' && session.break > 0) {
+    // Move to break
+    showTransition('break');
+  } else if (currentPhase === 'break' && currentCycle < session.cycles && session.work > 0) {
+    // Start next cycle with work
+    showTransition('work');
+  } else if (currentPhase === 'work' && currentCycle < session.cycles && session.break === 0) {
+    // No breaks — just next cycle (rare)
+    showTransition('work');
+  } else {
+    // All done
+    onSessionComplete();
+  }
+}
+
+function advancePhase() {
+  if (!session) return;
+  if (currentPhase === 'work') {
+    if (session.break > 0) {
+      currentPhase = 'break';
+      phaseSecondsTotal = session.break * 60;
+    } else if (currentCycle < session.cycles) {
+      currentCycle++;
+      phaseSecondsTotal = session.work * 60;
+    } else {
+      onSessionComplete();
+      return;
+    }
+  } else {
+    // Ending a break
+    if (currentCycle < session.cycles && session.work > 0) {
+      currentCycle++;
+      currentPhase = 'work';
+      phaseSecondsTotal = session.work * 60;
+    } else {
+      onSessionComplete();
+      return;
+    }
+  }
+  phaseSecondsLeft = phaseSecondsTotal;
+  warningGiven = false;
+  updatePhasePill();
+  renderCycleDots();
+  updateNextUp();
+  updateDisplay();
+  start();
+}
+
+function skipPhase() {
+  if (!session || !running) return;
+  clearInterval(interval);
+  running = false;
+  onPhaseEnd();
+}
+
+// ──────────────────────────────────────────────────────────────
+// TRANSITION SCREEN
+// ──────────────────────────────────────────────────────────────
+function showTransition(nextPhase) {
+  playTransition();
+  const overlay = document.getElementById('transitionOverlay');
+  const icon = document.getElementById('tIcon');
+  const title = document.getElementById('tTitle');
+  const sub = document.getElementById('tSub');
+  const activityBox = document.getElementById('tActivity');
+  const activityText = document.getElementById('tActivityText');
+  const countdown = document.getElementById('tCountdown');
+
+  if (nextPhase === 'break') {
+    icon.textContent = '☕';
+    title.textContent = 'Break time!';
+    sub.textContent = 'Good focus. Now it\'s time to rest your brain.';
+    activityText.textContent = BREAK_ACTIVITIES[activityIndex % BREAK_ACTIVITIES.length];
+    activityIndex++;
+    activityBox.style.display = 'block';
+  } else {
+    icon.textContent = '🎯';
+    title.textContent = 'Focus time!';
+    sub.textContent = `Ready for cycle ${currentCycle + 1}? Let's go.`;
+    activityBox.style.display = 'none';
+  }
+
+  overlay.classList.add('active');
+
+  // 3-2-1 countdown then auto-start next phase
+  let counter = 3;
+  countdown.textContent = `Starting in ${counter}...`;
+  const t = setInterval(() => {
+    counter--;
+    if (counter > 0) {
+      countdown.textContent = `Starting in ${counter}...`;
+    } else {
+      clearInterval(t);
+      overlay.classList.remove('active');
+      advancePhase();
+    }
+  }, 1000);
+}
+
+// ──────────────────────────────────────────────────────────────
+// SESSION COMPLETE
+// ──────────────────────────────────────────────────────────────
+function onSessionComplete() {
+  running = false;
+  phaseSecondsLeft = 0;
+  updatePlayBtn();
+  updateDisplay();
+  setStatus('Session complete! 🎉 Well done', 'done');
+  playSessionDone();
+
+  // Flash the time display
+  document.getElementById('circleTime').classList.add('done-flash');
+  setTimeout(() => document.getElementById('circleTime').classList.remove('done-flash'), 2500);
+
+  if (document.getElementById('fsOverlay').classList.contains('active')) {
+    document.getElementById('fsTime').classList.add('done-flash');
+    setTimeout(() => document.getElementById('fsTime').classList.remove('done-flash'), 2500);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// DISPLAY
+// ──────────────────────────────────────────────────────────────
+function fmt(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+}
+
+function updateDisplay() {
+  const pct = phaseSecondsTotal > 0 ? phaseSecondsLeft / phaseSecondsTotal : 0;
+  const timeStr = fmt(phaseSecondsLeft);
+
+  // Phase colour
+  const baseColor = currentPhase === 'break' ? 'var(--phase-break)' : 'var(--phase-work)';
+  const warnColor = 'var(--phase-warn)';
+  const strokeColor = pct <= 0.15 && pct > 0 ? warnColor : baseColor;
+
+  // Circle
+  const circ = 2 * Math.PI * 100;
+  document.getElementById('circleProgress').style.strokeDashoffset = circ * (1 - pct);
+  document.getElementById('circleProgress').style.stroke = strokeColor;
+  document.getElementById('circleTime').textContent = timeStr;
+  document.getElementById('circleTime').style.color = pct <= 0.15 && pct > 0 ? 'var(--warn)' : '';
+
+  // Fullscreen
+  const fsCirc = 2 * Math.PI * 180;
+  document.getElementById('fsProgress').style.strokeDashoffset = fsCirc * (1 - pct);
+  document.getElementById('fsProgress').style.stroke = strokeColor;
+  document.getElementById('fsTime').textContent = timeStr;
+
+  // Border colour on timer display for subtle phase cue
+  const td = document.querySelector('.timer-display');
+  td.style.borderColor = currentPhase === 'break' ? 'rgba(72,200,128,0.45)' : '';
+}
+
+function updatePlayBtn() {
+  const btn = document.getElementById('playBtn');
+  const fsBtn = document.getElementById('fsPlayBtn');
+  const skipBtn = document.getElementById('skipBtn');
+  const fsSkipBtn = document.getElementById('fsSkipBtn');
+
+  if (!session) {
+    btn.textContent = '▶ Start';
+    btn.className = 'ctrl-btn start';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+    fsBtn.textContent = '▶ Start';
+    fsBtn.className = 'ctrl-btn start';
+    skipBtn.style.display = 'none';
+    fsSkipBtn.style.display = 'none';
+    return;
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = '';
+  btn.style.cursor = '';
+
+  if (phaseSecondsLeft === 0 && currentCycle >= session.cycles) {
+    btn.textContent = '↺ Restart';
+    btn.className = 'ctrl-btn start';
+    fsBtn.textContent = '↺ Restart';
+    fsBtn.className = 'ctrl-btn start';
+    skipBtn.style.display = 'none';
+    fsSkipBtn.style.display = 'none';
+  } else if (running) {
+    btn.textContent = '⏸ Pause';
+    btn.className = 'ctrl-btn pause';
+    fsBtn.textContent = '⏸ Pause';
+    fsBtn.className = 'ctrl-btn pause';
+    skipBtn.style.display = '';
+    fsSkipBtn.style.display = '';
+  } else {
+    btn.textContent = '▶ Start';
+    btn.className = 'ctrl-btn start';
+    fsBtn.textContent = '▶ Start';
+    fsBtn.className = 'ctrl-btn start';
+    skipBtn.style.display = 'none';
+    fsSkipBtn.style.display = 'none';
+  }
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  const fsEl = document.getElementById('fsStatus');
+  el.textContent = msg;
+  el.className = 'status-msg' + (type ? ' ' + type : '');
+  fsEl.textContent = msg;
+  fsEl.className = 'fs-status' + (type ? ' ' + type : '');
+}
+
+// ──────────────────────────────────────────────────────────────
+// FULLSCREEN
+// ──────────────────────────────────────────────────────────────
+function openFullscreen() {
+  document.getElementById('fsOverlay').classList.add('active');
+  document.body.classList.add('fs-mode');
+  updateDisplay();
+  renderCycleDots();
+  try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch(e){}
+}
+
+function closeFullscreen() {
+  document.getElementById('fsOverlay').classList.remove('active');
+  document.body.classList.remove('fs-mode');
+  try { document.exitFullscreen && document.exitFullscreen(); } catch(e){}
+}
+
+// ──────────────────────────────────────────────────────────────
+// KEYBOARD
+// ──────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  // Don't hijack inputs
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return;
+
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  if (e.code === 'KeyR') resetSession();
+  if (e.code === 'Escape') closeFullscreen();
+  if (e.code === 'KeyF') openFullscreen();
+  if (e.code === 'KeyS' && running) skipPhase();
+});
+
+// ──────────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────────
+(function init() {
+  // Restore theme
+  try {
+    const savedTheme = localStorage.getItem('ss_timer_theme');
+    if (savedTheme === 'bright') setTheme('bright');
+  } catch(e){}
+
+  // Restore sound
+  try {
+    const savedSound = localStorage.getItem('ss_timer_sound');
+    if (savedSound === '0') toggleSound();
+  } catch(e){}
+
+  renderPresets();
+
+  // Restore last preset
+  try {
+    const last = localStorage.getItem('ss_timer_last_preset');
+    if (last && PRESETS.find(p => p.id === last)) {
+      choosePreset(last);
+    } else {
+      choosePreset('classic');
+    }
+  } catch(e) {
+    choosePreset('classic');
+  }
+})();
+</script>
+<a href="https://ko-fi.com/sendstepsuk" target="_blank" rel="noopener" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:8px;background:#FF5E5B;color:#fff;font-family:system-ui,sans-serif;font-size:0.82rem;font-weight:700;padding:11px 18px;border-radius:100px;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">☕ Support SendSteps</a>
+</div>
+</body>
+</html>
